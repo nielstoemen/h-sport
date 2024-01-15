@@ -11,22 +11,12 @@ function getApiData($apiKey) {
     return $apiData;
 }
 
-// Inloggen
-if (isset($_POST['login'])) {
-    // Voeg hier eventuele inloglogica toe (bijvoorbeeld validatie van gebruikersnaam en wachtwoord)
-    // ...
-
-    // Voor nu gaan we ervan uit dat de inloggegevens geldig zijn
-    // Je kunt hier later gebruikersgegevens in een sessie opslaan als dat nodig is
-    echo "Inloggen succesvol!";
-}
-
 // API-gegevens ophalen
 $apiKey = "HuzBrQx4MRx9LEHMIZTedDKobmHYQHzR2HlMyBlH";
 $apiData = getApiData($apiKey);
 
 // Gebruik de $apiData voor verdere verwerking
-print_r($apiData);
+// print_r($apiData);
 ?>
 
 <!DOCTYPE html>
@@ -34,18 +24,14 @@ print_r($apiData);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalistische Applicatie</title>
+    <title>h+sport</title>
 </head>
 <body>
-    <!-- Inlogformulier -->
-    <form method="post" action="">
-        <label for="username">Gebruikersnaam:</label>
-        <input type="text" name="username" required>
-
-        <label for="password">Wachtwoord:</label>
-        <input type="password" name="password" required>
-
-        <button type="submit" name="login">Inloggen</button>
-    </form>
+<?php foreach ($apiData as $index => $result): ?>
+            <label>
+                <input type="radio" name="selected_result" value="<?php echo $index; ?>">
+                <?php echo isset($result['description']) ? $result['description'] : 'Geen description beschikbaar'; ?>
+            </label><br>
+        <?php endforeach; ?>
 </body>
 </html>
