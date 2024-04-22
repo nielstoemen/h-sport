@@ -1,51 +1,119 @@
 <?php
-// Functie om API-gegevens op te halen
-function getApiData($apiKey) {
-    // Implementeer de logica om gegevens van de USDA FoodData Central API op te halen
-    // ...
-
-    // Voorbeeld: hier wordt aangenomen dat de API een array met gegevens teruggeeft
-    $apiUrl = "https://api.nal.usda.gov/fdc/v1/foods/list?api_key=$apiKey";
-    $apiData = json_decode(file_get_contents($apiUrl), true);
-
-    return $apiData;
-}
-
-// Inloggen
-if (isset($_POST['login'])) {
-    // Voeg hier eventuele inloglogica toe (bijvoorbeeld validatie van gebruikersnaam en wachtwoord)
-    // ...
-
-    // Voor nu gaan we ervan uit dat de inloggegevens geldig zijn
-    // Je kunt hier later gebruikersgegevens in een sessie opslaan als dat nodig is
-    echo "Inloggen succesvol!";
-}
-
-// API-gegevens ophalen
-$apiKey = "HuzBrQx4MRx9LEHMIZTedDKobmHYQHzR2HlMyBlH";
-$apiData = getApiData($apiKey);
-
-// Gebruik de $apiData voor verdere verwerking
-print_r($apiData);
+$api_key = 'HuzBrQx4MRx9LEHMIZTedDKobmHYQHzR2HlMyBlH';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalistische Applicatie</title>
-</head>
-<body>
-    <!-- Inlogformulier -->
-    <form method="post" action="">
-        <label for="username">Gebruikersnaam:</label>
-        <input type="text" name="username" required>
+<!-- HTML-formulier met zoekbalk -->
+<form method="GET" action="" id="searchForm">
+    <label for="search_term">Zoekterm:</label>
+    <input type="text" id="search_term" name="search_term" required>
+    <button type="submit">Zoeken</button>
+</form>
 
-        <label for="password">Wachtwoord:</label>
-        <input type="password" name="password" required>
+<!-- Container voor realtime resultaten -->
+<div id="searchResults"></div>
 
-        <button type="submit" name="login">Inloggen</button>
-    </form>
-</body>
-</html>
+<!-- JavaScript voor realtime bijwerken van resultaten -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('searchForm');
+    var searchResults = document.getElementById('searchResults');
+    var api_key = '<?php echo $api_key; ?>';
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        // Voer zoekactie uit bij formulierinzending
+        performSearch();
+    });
+
+    var debounceTimer;
+    var searchInput = document.getElementById('search_term');
+    searchInput.addEventListener('input', function () {
+        // Gebruik debouncing om het aantal API-aanroepen te verminderen
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(performSearch, 500);
+    });
+
+    function performSearch() {
+        var searchTerm = searchInput.value.trim();
+        if (searchTerm.length === 0) {
+            // Geen zoekterm, toon alle voedsels op alfabetische volgorde
+            displayAllFoods();
+        } else {
+            // Voer de API-aanroep uit met behulp van JavaScript Fetch API
+            fetch('https://api.nal.usda.gov/fdc/v1/foods/search?query=' + searchTerm + '&api_key=' + api_key)
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    // Verwerk de resultaten en toon ze
+                    displayResults(data);
+                })
+                .catch(function (error) {
+                    console.error('Fout bij het ophalen van gegevens van de USDA API', error);
+                });
+        }
+    }
+
+    function displayResults(data) {
+        if (data.foods && data.foods.length > 0) {
+            // Bouw de HTML voor de resultaten
+            var html = '<ul>';
+            data.foods.forEach(function (food) {
+                html += '<li><strong>Description:</strong> ' + (food.description ? food.description : 'Geen beschikbare beschrijving') + '<br>';
+                html += '<strong>Food Nutrients:</strong><ul>';
+                if (food.foodNutrients && food.foodNutrients.length > 0) {
+                    food.foodNutrients.forEach(function (nutrient) {
+                        html += '<li>' + nutrient.nutrientName + ': ' + nutrient.value + ' ' + nutrient.unitName + '</li>';
+                    });
+                } else {
+                    html += '<li>Geen beschikbare voedingsstoffen</li>';
+                }
+                html += '</ul></li><hr>';
+            });
+            html += '</ul>';
+
+            // Toon de resultaten
+            searchResults.innerHTML = html;
+        } else {
+            // Geen resultaten gevonden
+            searchResults.innerHTML = 'Geen resultaten gevonden voor de zoekterm: ' + searchInput.value;
+        }
+    }
+
+    function displayAllFoods() {
+        // Voer de API-aanroep uit om alle voedsels op alfabetische volgorde op te halen
+        fetch('https://api.nal.usda.gov/fdc/v1/foods?api_key=' + api_key)
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                // Sorteer de voedselgegevens op alfabetische volgorde
+                var sortedFoods = data.foods.sort(function (a, b) {
+                    return a.description.localeCompare(b.description);
+                });
+
+                // Bouw de HTML voor de resultaten
+                var html = '<ul>';
+                sortedFoods.forEach(function (food) {
+                    html += '<li><strong>Description:</strong> ' + (food.description ? food.description : 'Geen beschikbare beschrijving') + '<br>';
+                    html += '<strong>Food Nutrients:</strong><ul>';
+                    if (food.foodNutrients && food.foodNutrients.length > 0) {
+                        food.foodNutrients.forEach(function (nutrient) {
+                            html += '<li>' + nutrient.nutrientName + ': ' + nutrient.value + ' ' + nutrient.unitName + '</li>';
+                        });
+                    } else {
+                        html += '<li>Geen beschikbare voedingsstoffen</li>';
+                    }
+                    html += '</ul></li><hr>';
+                });
+                html += '</ul>';
+
+                // Toon de resultaten
+                searchResults.innerHTML = html;
+            })
+            .catch(function (error) {
+                console.error('Fout bij het ophalen van gegevens van de USDA API', error);
+            });
+    }
+});
+</script>
